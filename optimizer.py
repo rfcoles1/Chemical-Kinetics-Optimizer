@@ -2,10 +2,6 @@ import numpy as np
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
 
-import matplotlib.pyplot as plt
-from pylab import savefig
-from drawnow import drawnow, figure
-
 import os
 import sys
 
@@ -16,6 +12,7 @@ sys.path.insert(0,'./reactions')
 reactionfile = 'eq' + str(Ri)
 react = __import__(reactionfile)
 
+outfile = open('OptimizeResults.dat',"w")
 
 class agent():
     def __init__(self, lr, s_size, a_size):
@@ -96,7 +93,7 @@ e = ei
 
 init = tf.global_variables_initializer()
 
-RatesGraph = np.zeros([React.num_rates,total_frames])
+Results = np.zeros([React.num_rates+1,total_frames])
 ProductGraph = np.zeros(total_frames)
 
 with tf.Session() as sess:
@@ -126,75 +123,9 @@ with tf.Session() as sess:
             print (i, s, (total_product/i), (avg_product/1000))	
             avg_product = 0
 			
-        ProductGraph[i-1] = product
+        Results[0,i-1] = product
         for j in range(React.num_rates):
-            RatesGraph[j,i-1] = s[j]
+            Results[j+1,i-1] = s[j]
 		
-
-###PLOTTING###
-plt.figure(1)
-plt.xlabel("Episode")
-plt.ylabel("Product")
-plt.plot(ProductGraph)
-
-plt.figure(2)
-for j in range(React.num_rates):
-    plt.plot(RatesGraph[j], label ='k%d'%(j+1))	
-plt.xlabel("Episode")
-plt.ylabel("Reaction Rates")
-plt.legend(loc = 2)
-
-k_values = np.arange(0,2.1,0.1)
-n = len(k_values)
-results = np.zeros((n,n))
-maxresult = 0
-max1 = 0
-max2 = 0
-max3 = 0
-
-#obtains obtimal results 
-for i in range(n):
-    for j in range(n):
-        for k in range(n):
-            curr = react.reaction(100,100,100,k_values[i], k_values[j],k_values[k],1)
-            if curr > maxresult:
-                maxresult = curr
-                max1 = k_values[i]
-                max2 = k_values[j]
-                max3 = k_values[k]			
-
-            if colourplot == 1:
-                if Ri == 1: 
-                    if k_values[j] == 0:
-                        results[i,k] = curr
-                if Ri == 2:
-                    if k_values[i] == 2:
-                        results[j,k] = curr
-                if Ri == 3:
-                    if k_values[k] == 2:
-                        results[i,j] = curr
-                if Ri == 4:
-                    if k_values[k] == 2:
-                        results[i,j] = curr
-
-plt.figure(1)
-plt.plot([0,total_frames],[maxresult, maxresult], 'b--')
-savefig('ProductGraph')
-
-plt.figure(2)
-plt.plot([0,total_frames],[max1,max1], 'b--')
-plt.plot([0,total_frames], [max2,max2], 'y--')
-plt.plot([0,total_frames], [max3,max3], 'g--')
-savefig('RatesGraph')
-
-if colourplot == 1:
-    plt.figure(3)
-    plt.contourf(k_values, k_values, results,100)
-    plt.xlabel('k1')
-    plt.ylabel('k3')
-    plt.xlim([0,2])
-    plt.ylim([0,2])
-    plt.colorbar()
-    plt.plot(RatesGraph[0], RatesGraph[2], lw = 2.5,c = 'k')
-    savefig('ContourGraph')
-
+np.savetxt(outfile,np.transpose(Results), delimiter='\t', newline='\n')
+outfile.close()
